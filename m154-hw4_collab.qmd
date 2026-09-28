@@ -1,0 +1,133 @@
+---
+title: "154-HW4"
+format: pdf
+author: "name"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.height=4, fig.width=4)
+library(tidyverse)
+# Welcome to quarto! 
+# This is a comment, R will not compile this line 
+```
+ 
+
+#### Q1. Diabetes
+
+The `diabetes` data contain measurements for 768 individuals. The response variable `Outcome` is equal to 1 for individuals recorded as having diabetes and 0 otherwise. We will use 70% of the observations for training (this is the *training* set) and hold out the remaining 30% for evaluating the classifier. 
+
+```{r message=FALSE, warning=FALSE}
+set.seed(154)
+diabetes <- read_csv("diabetes.csv")
+train_id <- sample(seq_len(nrow(diabetes)), size = 0.7 * nrow(diabetes))
+train <- diabetes[train_id, ]
+test <- diabetes[-train_id, ]
+```
+
+(a) What proportion of individuals in the training data have `Outcome = 1`?
+
+(b) Fit a logistic regression model predicting `Outcome` using `Glucose`, `BMI`, and `Age`. Report the estimated coefficients.  The logistic regression model has the form
+$$\log\left(\frac{p}{1-p}\right)=
+\beta_0+\beta_1\text{Glucose}+\beta_2\text{BMI}+\beta_3\text{Age},$$
+
+
+where $p=P(\text{Outcome}=1)$. Interpret the estimated coefficient of `Glucose.`
+
+(c) Compute $e^{\hat\beta_{\text{Glucose}}}$ and interpret this value as the ratio discussed in class. 
+
+(d) Use the fitted model to find the predicted probability of `Outcome = 1` for an individual with `Glucose = 140`, `BMI = 30`, and `Age = 40`.
+
+
+(e) A *confusion matrix* compares the predicted class from a classifier with the actual class. For a binary outcome, each observation falls into one of four categories:
+
+$$\begin{array}{c|cc}
+& \text{Actual }0 & \text{Actual }1\\
+\hline
+\text{Predicted }0 & \text{TN} & \text{FN}\\
+\text{Predicted }1 & \text{FP} & \text{TP}
+\end{array}$$
+
+Where, **TP** is a true positive, **TN** is a true negative, **FP** is a false positive, and **FN** is a false negative.
+
+A confusion matrix shows not only how often a classifier is correct, but also the types of mistakes it makes. Two classifiers can have similar accuracy while having different numbers of false positives and false negatives. The confusion matrix is used to compute measures such as accuracy, sensitivity, and specificity. 
+Use the model to obtain predicted probabilities for the test observations. Classify an observation as 1 when its predicted probability is at least 0.50. 
+Construct a confusion matrix.
+
+```{r}
+ 
+```
+
+(f) From the confusion matrix, identify the numbers of true positives, true negatives, false positives, and false negatives. Compute
+
+$$\text{Accuracy}=\frac{\text{TP}+\text{TN}}{\text{TP}+\text{TN}+\text{FP}+\text{FN}},
+\qquad
+\text{Sensitivity}=\frac{\text{TP}}{\text{TP}+\text{FN}},
+\qquad
+\text{Specificity}=\frac{\text{TN}}{\text{TN}+\text{FP}}.$$
+
+Interpret sensitivity and specificity in context.
+
+(g) Repeat the classification using a threshold of 0.30. Recompute the confusion matrix, sensitivity, and specificity. How do sensitivity and specificity change? Explain why.
+
+
+
+
+
+ 
+#### Q2. Decision Boundary
+
+Suppose we want to classify `Outcome` using `Glucose` and `BMI`.
+
+(a) Fit a logistic regression model using `Glucose` and `BMI`.
+Create a scatterplot of `Glucose` and `BMI`, using color to indicate `Outcome`. Based on the plot, does it appear that the two classes can be separated well by a single straight-line boundary? Briefly explain.
+
+
+(b) Sketch the `Glucose`-`BMI` plane and draw a possible straight-line decision boundary. Label the region that would be classified as 0 and the region that would be classified as 1. Embed a clear image of your sketch in your submitted PDF.
+
+(c) Consider the following classification rule:
+
+- if `Glucose >= 130`, predict 1;
+- if `Glucose < 130` and `BMI >= 35`, predict 1;
+- otherwise, predict 0.
+
+Apply this rule to the training data and construct a confusion matrix.
+
+```{r}
+
+```
+
+(d) Sketch the regions in the `Glucose`-`BMI` plane created by the rule in part (d). Show the cut at `Glucose = 130` and the cut at `BMI = 35`, and label each region with its predicted class. Embed a clear image of your sketch in your submitted PDF.
+
+(e) Compare the shapes of the decision regions in your two sketches. How is the rule in part (d) different from the decision boundary produced by logistic regression?
+
+(f) Decision trees create predictions by repeatedly splitting the predictor space into regions. What information would be needed to decide where the splits should occur?
+
+ 
+#### Q3. Waiting 
+
+Suppose $Y$ is a positive continuous response measuring waiting time, and $x$ is an explanatory variable. Consider the model
+
+$$Y_i \sim \text{Exponential}(\mu_i), \qquad \log(\mu_i)=\beta_0+\beta_1x_i,$$
+
+where $\mu_i=E(Y_i\mid x_i)$.
+
+(a) Solve for $\mu_i$ as a function of $x_i$. Without using R, sketch the mean response $\mu(x)$ when $\beta_0=1$ and $\beta_1=0.4$. On the same axes, sketch what you expect when $\beta_1=-0.4$. Label the axes and indicate which curve corresponds to each value of $\beta_1$. Embed a clear image of your sketch in the submitted PDF.
+
+(b) What is the effect of increasing $x$ by one unit on the mean response? Show that the following, does not depend on $x$. Interpret this quantity.
+
+
+$$\frac{\mu(x+1)}{\mu(x)}$$
+
+
+(c) Use R to calculate the mean response for $x=0,1,\ldots,10$ when $\beta_0=1$ and $\beta_1=0.4$. Compare the R plot with your sketch from 
+
+(d) For the model in part (d), calculate the predicted mean response at $x=2$ and $x=3$. Verify that the ratio of these two predictions agrees with your interpretation in part (d).
+ 
+
+
+
+
+#### Q4. A legal quest
+
+*The goal of this "question" is to work with a small group on one shared GitHub repository, contribute to the same analysis, and use GitHub to keep track of changes. See pdf for instructions. *
+
