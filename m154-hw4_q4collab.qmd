@@ -17,4 +17,3 @@ Group members: Nicky Siamwalla and Masaharu Kai
 
 GitHub repository: [View our GitHub repository](https://github.com/simiwalla/stat-learning-group-analysis)
 
-
