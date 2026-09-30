@@ -51,7 +51,8 @@ ggplot(monthly, aes(month, cases, color = series)) +
   theme_minimal() +
   theme(legend.position = "top")
 ```
-This visualization shows thar the number of cases since 2025 has vastly multiplied by approximately 7 times. On the other hand, it is shown that professional sanction has barely seen the same trend and 
+This visualization shows that the number of cases per month since 2025 has vastly multiplied by approximately 7 times, indicating a huge rise in the level of AI mis-use. On the other hand, it has shown that professional sanctions per month do not follow a similar trend and remain at the same level. 
+
 ```{r}
 library(tidyverse)
 library(scales)
@@ -75,29 +76,7 @@ ggplot(yearly, aes(year_lab, rate)) +
        caption = "n = total cases that year. *2026 through Sep 23.") +
   theme_minimal()
 ```
-
-```{r}
-library(tidyverse)
-library(scales)
-
-by_juris <- df %>%
-  count(`State(s)`, sort = TRUE) %>%
-  mutate(group = if_else(row_number() <= 10, `State(s)`, "Other")) %>%
-  group_by(group) %>%
-  summarise(n = sum(n), .groups = "drop") %>%
-  mutate(group = fct_reorder(group, n),
-         group = fct_relevel(group, "Other"),   # put Other at the bottom
-         label = paste0(comma(n), "  (", percent(n / sum(n), accuracy = 1), ")"))
-
-ggplot(by_juris, aes(n, group, fill = group == "Other")) +
-  geom_col(width = 0.6, show.legend = FALSE) +
-  geom_text(aes(label = label), hjust = -0.1, size = 3.5) +
-  scale_fill_manual(values = c(`FALSE` = "#2a78d6", `TRUE` = "#8c8b86")) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.2)), labels = comma) +
-  labs(title = "Total documented cases to date, by jurisdiction",
-       x = "Cases (Apr 2023 – Sep 2026)", y = NULL) +
-  theme_minimal()
-```
+The bar chart above helps tie this idea together. From 2023-2025, the number of cases that ended in sanctioning rose steadily by 1-2% per year. However, in 2026, a year that is not even over yet but already has the highest case count, the rate of sanctioning fell to the 2023 baseline. These visualizations motivate us to look at exactly which factors affect the likelihood of professional sanctions in hopes of finding a clearer answer as to why sanctions over time seem to have stagnated even with increasing AI prevalence. To do this, we will fit a logistic regression model focusing on three main variables: 1) The country of origin of the case; 2) The party involved 
 
 ```{r}
 library(tidyverse)
@@ -145,5 +124,31 @@ summary(fit)
 exp(cbind(OR = coef(fit), confint(fit)))
 
 # overall likelihood-ratio
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+
+by_juris <- df %>%
+  count(`State(s)`, sort = TRUE) %>%
+  mutate(group = if_else(row_number() <= 10, `State(s)`, "Other")) %>%
+  group_by(group) %>%
+  summarise(n = sum(n), .groups = "drop") %>%
+  mutate(group = fct_reorder(group, n),
+         group = fct_relevel(group, "Other"),   # put Other at the bottom
+         label = paste0(comma(n), "  (", percent(n / sum(n), accuracy = 1), ")"))
+
+ggplot(by_juris, aes(n, group, fill = group == "Other")) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = label), hjust = -0.1, size = 3.5) +
+  scale_fill_manual(values = c(`FALSE` = "#2a78d6", `TRUE` = "#8c8b86")) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.2)), labels = comma) +
+  labs(title = "Total documented cases to date, by jurisdiction",
+       x = "Cases (Apr 2023 – Sep 2026)", y = NULL) +
+  theme_minimal()
+```
+
+
 ```
 
