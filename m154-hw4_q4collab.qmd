@@ -17,6 +17,7 @@ Group members: Nicky Siamwalla and Masaharu Kai
 
 GitHub repository: [View our GitHub repository](https://github.com/simiwalla/stat-learning-group-analysis)
 
+<<<<<<< Updated upstream
 
 The use of AI in legal cases is becoming an increasingly prevalent issue. One of the ways in which courts have combated this is to impose professional sanctions on those involved when mis-use inevitably leads to unjust legal outcomes. However, it is not exactly clear when cases rise to this level. Thus, the goal of this study is to try and fit a logistic regression to determine how the Country of origin, the professional party involved, and the primary legal field alter the odds of professional sanctioning.
 
@@ -175,3 +176,6 @@ Overall, our model has a few limitations. The largest one is probably sparsity i
 
 test test 
 
+=======
+asdfghjk
+>>>>>>> Stashed changes
