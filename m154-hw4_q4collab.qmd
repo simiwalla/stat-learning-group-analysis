@@ -51,7 +51,8 @@ ggplot(monthly, aes(month, cases, color = series)) +
   theme_minimal() +
   theme(legend.position = "top")
 ```
-This visualization shows thar the number of cases since 2025 has vastly multiplied by approximately 7 times. On the other hand, it is shown that professional sanction has barely seen the same trend and 
+This visualization shows that the number of cases per month since 2025 has vastly multiplied by approximately 7 times, indicating a huge rise in the level of AI mis-use. On the other hand, it has shown that professional sanctions per month do not follow a similar trend and remain at the same level. 
+
 ```{r}
 library(tidyverse)
 library(scales)
@@ -75,29 +76,7 @@ ggplot(yearly, aes(year_lab, rate)) +
        caption = "n = total cases that year. *2026 through Sep 23.") +
   theme_minimal()
 ```
-
-```{r}
-library(tidyverse)
-library(scales)
-
-by_juris <- df %>%
-  count(`State(s)`, sort = TRUE) %>%
-  mutate(group = if_else(row_number() <= 10, `State(s)`, "Other")) %>%
-  group_by(group) %>%
-  summarise(n = sum(n), .groups = "drop") %>%
-  mutate(group = fct_reorder(group, n),
-         group = fct_relevel(group, "Other"),   # put Other at the bottom
-         label = paste0(comma(n), "  (", percent(n / sum(n), accuracy = 1), ")"))
-
-ggplot(by_juris, aes(n, group, fill = group == "Other")) +
-  geom_col(width = 0.6, show.legend = FALSE) +
-  geom_text(aes(label = label), hjust = -0.1, size = 3.5) +
-  scale_fill_manual(values = c(`FALSE` = "#2a78d6", `TRUE` = "#8c8b86")) +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.2)), labels = comma) +
-  labs(title = "Total documented cases to date, by jurisdiction",
-       x = "Cases (Apr 2023 – Sep 2026)", y = NULL) +
-  theme_minimal()
-```
+The bar chart above helps tie this idea together. From 2023-2025, the number of cases that ended in sanctioning rose steadily by 1-2% per year. However, in 2026, a year that is not even over yet but already has the highest case count, the rate of sanctioning fell to the 2023 baseline. These visualizations motivate us to look at exactly which factors affect the likelihood of professional sanctions in hopes of finding a clearer answer as to why sanctions over time seem to have stagnated even with increasing AI prevalence. To do this, we will fit a logistic regression model focusing on three main variables: 1) The country of origin of the case; 2) The party involved; 3) The primary legal field.
 
 ```{r}
 library(tidyverse)
@@ -145,5 +124,54 @@ summary(fit)
 exp(cbind(OR = coef(fit), confint(fit)))
 
 # overall likelihood-ratio
+```
+Firstly, we see that the country of origin in many cases can have significant impacts on the likelihood of sanctioning. All coefficients in this case are in comparison with the US. For instance, in Canada, the coefficient is ~(2.69). This means that holding party and legal field constant, the odds of sanctioning are $1-~e^-2.69\approx1-0.07\approx 93$% lower in Canada than the US. It is worth noting that almost all coefficients here are negative, meaning all else equal the odds of sanctioning are higher in the US than elsewhere. However, we do see that Brazil has a positive coefficient of ~0.81, translating to, all else equal, a roughly 124% higher odds of sanctioning, significant at the 2% level. 
+
+```{r}
+library(tidyverse)
+library(scales)
+
+by_juris <- df %>%
+  filter(!is.na(`State(s)`)) %>%
+  mutate(sanctioned = `Professional Sanction` == "Yes") %>%
+  count(`State(s)`, sanctioned) %>%
+  pivot_wider(names_from = sanctioned, values_from = n, values_fill = 0) %>%
+  rename(not_sanctioned = `FALSE`, sanctioned = `TRUE`) %>%
+  mutate(total = sanctioned + not_sanctioned) %>%
+  arrange(desc(total)) %>%
+  mutate(group = if_else(row_number() <= 10, `State(s)`, "Other")) %>%
+  group_by(group) %>%
+  summarise(sanctioned = sum(sanctioned),
+            not_sanctioned = sum(not_sanctioned),
+            total = sum(total), .groups = "drop") %>%
+  mutate(rate  = sanctioned / total,
+         group = fct_relevel(fct_reorder(group, total), "Other"),  # USA on top, Other at bottom
+         label = paste0(percent(rate, accuracy = 0.1), "   ",
+                        sanctioned, " of ", comma(total)))
+
+plot_df <- by_juris %>%
+  pivot_longer(c(sanctioned, not_sanctioned), names_to = "status", values_to = "cases") %>%
+  mutate(status = factor(status, levels = c("not_sanctioned", "sanctioned"),
+                         labels = c("Not sanctioned", "Sanctioned")))
+
+ggplot(plot_df, aes(cases, group, fill = status)) +
+  geom_col(width = 0.62, color = "#fcfcfb") +
+  geom_text(data = by_juris, aes(total, group, label = label, fill = NULL),
+            hjust = -0.1, size = 3.5) +
+  scale_fill_manual(values = c("Sanctioned" = "#d63a3a", "Not sanctioned" = "#2a78d6"),
+                    breaks = c("Sanctioned", "Not sanctioned")) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.25)), labels = comma) +
+  labs(title = "Documented cases by jurisdiction, and share professionally sanctioned",
+       x = "Documented cases", y = NULL, fill = NULL) +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+The visualization above helps show why this may be the case. Of their 41 AI hallucination cases, Brazil sanctioned 17, which is almost half, albeit with a small sample size. This chart also shows that most of the cases are centered in the US, and that many countries actually have not implemented any sanctions yet. 
+
+Aside from country, we see that lawyers are also far more likely to get sanctioned than pro se. Upon further research, we see this is because pro se is self-represented individuals, and the sanctions placed on them are likely less harsh due to the fact that they are simply not even lawyers. 
+Finally, we see largely insignificant results when it comes to the legal field, except for criminal cases, which has a coefficient of ~0.83 in comparison to contract cases. This amounts to a ~130% increase in the odds ell else equal. This makes sense, as criminal cases are largely the most serious and nature and thus require the harshest punishments.
+
+Overall, our model has a few limitations. The largest one is probably sparsity in data in many cases. For instance, Canada has only 1 sanction out of 217 total, and many countries don't have a single one, meaning our solutions are based oftentimes on a small base. Furthermore, our study currently has lots of omitted variables like monetary penalties, or the type of hallucination/misconduct, which likely contribute somewhat to odds. However these variables have many missing or N/A entries, or are harder in nature to condense into a few comparable categories. In terms of the raw data itself, there can also be problems as the rise of AI use is liekly correlated with mis-use, and hence a large sample of our data does come from later dates. If there are mismatches with the dates, or countries change policy in between we fail to capture this nuance. 
+
 ```
 
