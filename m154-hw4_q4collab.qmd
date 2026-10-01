@@ -17,3 +17,133 @@ Group members: Nicky Siamwalla and Masaharu Kai
 
 GitHub repository: [View our GitHub repository](https://github.com/simiwalla/stat-learning-group-analysis)
 
+
+The use of AI in legal cases is becoming an increasingly prevalent issue. One of the ways in which courts have combated this is to impose professional sanctions on those involved when mis-use inevitably leads to unjust legal outcomes. However, it is not exactly clear when cases rise to this level. Thus, the goal of this study is to try and fit a logistic regression to determine how the Country of origin, the professional party involved, and the primary legal field alter the odds of professional sanctioning.
+
+```{r}
+df <- read_csv("hallucination_cases.csv")
+
+library(tidyverse)
+library(lubridate)
+
+df <- read_csv("hallucination_cases.csv")
+
+monthly <- df %>%
+  mutate(Date = as.Date(Date),
+         month = floor_date(Date, "month"),
+         sanction = `Professional Sanction` == "Yes") %>%
+  filter(!is.na(month)) %>%
+  group_by(month) %>%
+  summarise(`All cases` = n(),
+            `Professional sanction` = sum(sanction), .groups = "drop") %>%
+  complete(month = seq(min(month), max(month), by = "month"),
+           fill = list(`All cases` = 0, `Professional sanction` = 0)) %>%
+  pivot_longer(-month, names_to = "series", values_to = "cases")
+
+ggplot(monthly, aes(month, cases, color = series)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("All cases" = "#2a78d6",
+                                "Professional sanction" = "#eb6834")) +
+  labs(title = "Documented AI hallucination cases by month",
+       x = NULL, y = "Cases per month", color = NULL,
+       caption = "Sep 2026 is partial (data through Sep 23)") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+This visualization shows thar the number of cases since 2025 has vastly multiplied by approximately 7 times. On the other hand, it is shown that professional sanction has barely seen the same trend and 
+```{r}
+library(tidyverse)
+library(scales)
+
+yearly <- df %>%
+  mutate(Date = as.Date(Date), year = year(Date),
+         sanction = `Professional Sanction` == "Yes") %>%
+  filter(!is.na(year)) %>%
+  group_by(year) %>%
+  summarise(n = n(), k = sum(sanction), rate = k / n, .groups = "drop") %>%
+  mutate(label = paste0(percent(rate, accuracy = 0.1), "\nn = ", comma(n)),
+         year_lab = if_else(year == 2026, "2026*", as.character(year)))
+
+ggplot(yearly, aes(year_lab, rate)) +
+  geom_col(fill = "#2a78d6", width = 0.5) +
+  geom_text(aes(label = label), vjust = -0.4, lineheight = 1.2) +
+  scale_y_continuous(labels = percent_format(accuracy = 1),
+                     expand = expansion(mult = c(0, 0.3))) +
+  labs(title = "Share of cases with a professional sanction, by year",
+       x = NULL, y = "% of cases sanctioned",
+       caption = "n = total cases that year. *2026 through Sep 23.") +
+  theme_minimal()
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+
+by_juris <- df %>%
+  count(`State(s)`, sort = TRUE) %>%
+  mutate(group = if_else(row_number() <= 10, `State(s)`, "Other")) %>%
+  group_by(group) %>%
+  summarise(n = sum(n), .groups = "drop") %>%
+  mutate(group = fct_reorder(group, n),
+         group = fct_relevel(group, "Other"),   # put Other at the bottom
+         label = paste0(comma(n), "  (", percent(n / sum(n), accuracy = 1), ")"))
+
+ggplot(by_juris, aes(n, group, fill = group == "Other")) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = label), hjust = -0.1, size = 3.5) +
+  scale_fill_manual(values = c(`FALSE` = "#2a78d6", `TRUE` = "#8c8b86")) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.2)), labels = comma) +
+  labs(title = "Total documented cases to date, by jurisdiction",
+       x = "Cases (Apr 2023 – Sep 2026)", y = NULL) +
+  theme_minimal()
+```
+
+```{r}
+library(tidyverse)
+
+df <- read_csv("hallucination_cases.csv")
+
+d <- df %>%
+  mutate(
+    # outcome: Yes/No factor (glm treats the 2nd level, "Yes", as the event)
+    `Professional Sanction` = factor(`Professional Sanction`, levels = c("No", "Yes")),
+
+    # collapse to 5 main jurisdictions + Other
+    `State(s)` = case_when(
+      `State(s)` %in% c("USA", "Canada", "Australia", "UK", "Brazil") ~ `State(s)`,
+      TRUE ~ "Other"),
+    `State(s)` = relevel(factor(`State(s)`), ref = "USA"),
+
+    # collapse 16 labels to Lawyer / Pro se / Other
+    `Party(ies)` = case_when(
+      `Party(ies)` == "Lawyer"          ~ "Lawyer",
+      `Party(ies)` == "Pro Se Litigant" ~ "Pro se",
+      TRUE                              ~ "Other"),
+    `Party(ies)` = relevel(factor(`Party(ies)`), ref = "Lawyer"),
+
+    # keep the 7 main fields, merge the rest into "other", keep NA as "missing"
+    `Legal Field Primary` = case_when(
+      is.na(`Legal Field Primary`) ~ "missing",
+      `Legal Field Primary` %in% c("contract", "administrative", "civil rights",
+                                   "employment", "tort", "family", "criminal") ~ `Legal Field Primary`,
+      TRUE ~ "other"),
+    `Legal Field Primary` = relevel(factor(`Legal Field Primary`), ref = "contract")
+  )
+
+# check for empty cells first
+table(d$`State(s)`, d$`Professional Sanction`)
+table(d$`Party(ies)`, d$`Professional Sanction`)
+table(d$`Legal Field Primary`, d$`Professional Sanction`)
+
+fit <- glm(`Professional Sanction` ~ `State(s)` + `Party(ies)` + `Legal Field Primary`,
+           data = d, family = binomial)
+
+summary(fit)
+
+# odds ratios with profile-likelihood CIs
+exp(cbind(OR = coef(fit), confint(fit)))
+
+# overall likelihood-ratio
+```
+
